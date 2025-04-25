@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: l1-monitoring
+  labels:
+    app: l1-monitoring
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: l1-monitoring
+  template:
+    metadata:
+      labels:
+        app: l1-monitoring
+    spec:
+      containers:
+      - name: l1-monitoring-app
+        image: ${YOUR_REGISTRY}/l1-monitoring:latest
+        ports:
+        - containerPort: 5000
+        env:
+        # Primary ClickHouse Database Configuration
+        - name: USE_CLICKHOUSE
+          value: "true"
+        - name: CLICKHOUSE_HOST
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLICKHOUSE_HOST
+        - name: CLICKHOUSE_PORT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLICKHOUSE_PORT
+        - name: CLICKHOUSE_DB
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLICKHOUSE_DB
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLICKHOUSE_PASSWORD
+        - name: CLICKHOUSE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: CLICKHOUSE_URL
+              
+        # Fallback PostgreSQL Database Configuration
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: DATABASE_URL
+        
+        # OLLAMA Configuration
+        - name: OLLAMA_HOST
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: OLLAMA_HOST
+        - name: OLLAMA_PORT
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: OLLAMA_PORT
+        - name: OLLAMA_URL
+          value: "http://ollama:11434"
+        - name: OLLAMA_MODEL
+          value: "llama2"
+        
+        # App Configuration
+        - name: FLASK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: FLASK_SECRET_KEY
+        
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 45
+          periodSeconds: 15
