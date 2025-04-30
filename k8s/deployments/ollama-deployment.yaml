@@ -14,47 +14,31 @@ spec:
       labels:
         app: ollama
     spec:
-      initContainers:
-      - name: init-ollama
-        image: ollama/ollama:latest
-        command:
-        - /bin/sh
-        - -c
-        - |
-          cp /config/init.sh /root/.ollama/
-          chmod +x /root/.ollama/init.sh
-          /root/.ollama/init.sh
-        volumeMounts:
-        - name: ollama-data
-          mountPath: /root/.ollama
-        - name: init-script
-          mountPath: /config
-        resources:
-          requests:
-            memory: "2Gi"
-            cpu: "1000m"
-          limits:
-            memory: "4Gi"
-            cpu: "2000m"
       containers:
       - name: ollama-service
         image: ollama/ollama:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 11434
+          name: api
         resources:
           requests:
             memory: "4Gi"
-            cpu: "2000m"
+            cpu: "1000m"
           limits:
             memory: "8Gi"
-            cpu: "4000m"
+            cpu: "2000m"
         volumeMounts:
         - name: ollama-data
           mountPath: /root/.ollama
+        lifecycle:
+          postStart:
+            exec:
+              command: 
+              - "/bin/sh"
+              - "-c"
+              - "ollama pull llama2 || true"
       volumes:
       - name: ollama-data
         persistentVolumeClaim:
           claimName: ollama-data-pvc
-      - name: init-script
-        configMap:
-          name: ollama-init-script

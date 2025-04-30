@@ -17,6 +17,7 @@ spec:
       containers:
       - name: clickhouse
         image: clickhouse/clickhouse-server:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8123  # HTTP port
           name: http
@@ -24,30 +25,21 @@ spec:
           name: native
         resources:
           requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
             memory: "4Gi"
             cpu: "1000m"
-          limits:
-            memory: "8Gi"
-            cpu: "2000m"
         volumeMounts:
         - name: clickhouse-data
           mountPath: /var/lib/clickhouse
         env:
         - name: CLICKHOUSE_USER
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: CLICKHOUSE_USER
+          value: "default"
         - name: CLICKHOUSE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: CLICKHOUSE_PASSWORD
+          value: ""
         - name: CLICKHOUSE_DB
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: CLICKHOUSE_DB
+          value: "default"
         livenessProbe:
           httpGet:
             path: /ping
