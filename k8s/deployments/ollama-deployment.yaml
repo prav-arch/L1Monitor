@@ -14,6 +14,17 @@ spec:
       labels:
         app: ollama
     spec:
+      # Remove node selector as it might cause taint issues
+      # Add tolerations for common taints
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 300
       containers:
       - name: ollama-service
         image: ollama/ollama:latest
@@ -23,11 +34,11 @@ spec:
           name: api
         resources:
           requests:
+            memory: "1Gi"
+            cpu: "250m"
+          limits:
             memory: "4Gi"
             cpu: "1000m"
-          limits:
-            memory: "8Gi"
-            cpu: "2000m"
         volumeMounts:
         - name: ollama-data
           mountPath: /root/.ollama
@@ -37,8 +48,18 @@ spec:
               command: 
               - "/bin/sh"
               - "-c"
-              - "ollama pull llama2 || true"
+              - "ollama serve & sleep 30 && ollama pull llama2 || true"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 11434
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 10
       volumes:
       - name: ollama-data
-        persistentVolumeClaim:
-          claimName: ollama-data-pvc
+        # Use emptyDir as a fallback if PVCs are not available
+        # This will make the pod schedulable but data won't persist across restarts
+        emptyDir: {}
